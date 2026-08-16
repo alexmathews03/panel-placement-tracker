@@ -45,10 +45,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.profile.name);
-    _cgpaController = TextEditingController(text: widget.profile.cgpa.toString());
+    _cgpaController = TextEditingController(
+        text: widget.profile.cgpa > 0 ? widget.profile.cgpa.toString() : '');
     _roleController = TextEditingController(text: widget.profile.targetRole);
     final norm = PlacementDrive.normalizeBranch(widget.profile.branch);
-    _selectedBranch = _branchOptions.contains(norm) ? norm : (_branchOptions.contains(widget.profile.branch) ? widget.profile.branch : 'CSE');
+    _selectedBranch = _branchOptions.contains(norm)
+        ? norm
+        : (_branchOptions.contains(widget.profile.branch)
+            ? widget.profile.branch
+            : 'CSE');
     _backlogs = widget.profile.activeBacklogs;
   }
 
@@ -61,18 +66,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   int get _eligibleDriveCount {
-    final double cgpa = double.tryParse(_cgpaController.text) ?? widget.profile.cgpa;
-    return widget.drives.where((d) => d.checkEligibility(cgpa, _backlogs, _selectedBranch)).length;
+    final double cgpa =
+        double.tryParse(_cgpaController.text.trim()) ?? widget.profile.cgpa;
+    return widget.drives
+        .where((d) => d.checkEligibility(cgpa, _backlogs, _selectedBranch))
+        .length;
   }
 
   Future<void> _saveProfile() async {
-    final double cgpa = double.tryParse(_cgpaController.text.trim()) ?? 8.0;
+    final trimmedName = _nameController.text.trim();
+    if (trimmedName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your full name.'),
+          backgroundColor: AppColors.urgentRed,
+        ),
+      );
+      return;
+    }
+
+    final double cgpa = double.tryParse(_cgpaController.text.trim()) ?? 0.0;
     final updatedProfile = StudentProfile(
-      name: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : 'Student',
+      name: trimmedName,
       branch: _selectedBranch,
       cgpa: cgpa.clamp(0.0, 10.0),
       activeBacklogs: _backlogs,
-      targetRole: _roleController.text.trim().isNotEmpty ? _roleController.text.trim() : 'Software Engineer',
+      targetRole: _roleController.text.trim().isNotEmpty
+          ? _roleController.text.trim()
+          : 'Software Engineer',
     );
 
     await StorageService.saveProfile(updatedProfile);
@@ -81,7 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Profile & criteria saved! Live eligibility updated.'),
+          content: Text('Profile saved successfully!'),
           backgroundColor: AppColors.cyanAccent,
         ),
       );
@@ -93,6 +114,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final eligibleCount = _eligibleDriveCount;
     final totalCount = widget.drives.length;
+    final hasName = _nameController.text.trim().isNotEmpty;
+    final displayName = hasName ? _nameController.text.trim() : 'Your Name';
+    final displayCgpa = _cgpaController.text.trim().isNotEmpty
+        ? '${_cgpaController.text.trim()} CGPA'
+        : 'Set CGPA';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -100,7 +126,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: AppColors.background.withOpacity(0.85),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: AppColors.onSurface),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              size: 18, color: AppColors.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -148,17 +175,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.surfaceContainer,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.cyanAccent.withOpacity(0.4), width: 2),
+                      border: Border.all(
+                          color: AppColors.cyanAccent.withOpacity(0.4),
+                          width: 2),
                     ),
                     child: Center(
-                      child: Text(
-                        _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : 'A',
-                        style: const TextStyle(
-                          color: AppColors.cyanAccent,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: hasName
+                          ? Text(
+                              _nameController.text.trim()[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: AppColors.cyanAccent,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : const Icon(Icons.person_outline,
+                              color: AppColors.cyanAccent, size: 24),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -167,16 +199,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _nameController.text.isNotEmpty ? _nameController.text : 'Student Name',
-                          style: const TextStyle(
-                            color: AppColors.onSurface,
+                          displayName,
+                          style: TextStyle(
+                            color: hasName ? AppColors.onSurface : AppColors.onSurfaceVariant,
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '$_selectedBranch • ${_cgpaController.text} CGPA',
+                          '$_selectedBranch • $displayCgpa',
                           style: const TextStyle(
                             color: AppColors.onSurfaceVariant,
                             fontSize: 13,

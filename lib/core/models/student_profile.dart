@@ -13,13 +13,16 @@ class StudentProfile {
     required this.targetRole,
   });
 
+  /// True when the user has never set up their profile.
+  bool get isNew => name.isEmpty;
+
   factory StudentProfile.defaultProfile() {
     return StudentProfile(
-      name: 'Alex Mathews',
-      branch: 'CSBS',
-      cgpa: 8.72,
+      name: '',
+      branch: 'CSE',
+      cgpa: 0.0,
       activeBacklogs: 0,
-      targetRole: 'Flutter / Mobile Engineer',
+      targetRole: '',
     );
   }
 
@@ -32,10 +35,10 @@ class StudentProfile {
       };
 
   factory StudentProfile.fromJson(Map<String, dynamic> json) => StudentProfile(
-        name: json['name'] ?? 'Alex Mathews',
-        branch: json['branch'] ?? 'CSBS',
-        cgpa: (json['cgpa'] as num?)?.toDouble() ?? 8.72,
+        name: json['name'] ?? '',
+        branch: json['branch'] ?? 'CSE',
+        cgpa: (json['cgpa'] as num?)?.toDouble() ?? 0.0,
         activeBacklogs: json['activeBacklogs'] as int? ?? 0,
-        targetRole: json['targetRole'] ?? 'Flutter / Mobile Engineer',
+        targetRole: json['targetRole'] ?? '',
       );
 }

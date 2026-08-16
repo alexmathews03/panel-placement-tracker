@@ -28,11 +28,10 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   bool _isLoading = true;
   int _currentNavIndex = 0;
   
-  // Search & Filter State
+  // Search State
   bool _isSearching = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  DriveStage? _selectedFilterStage;
 
   static const _shareChannel = MethodChannel('com.example.drivedeck/share');
   String? _lastCheckedClipboard;
@@ -80,6 +79,8 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
     super.dispose();
   }
 
+  bool _hasPromptedProfile = false;
+
   Future<void> _loadData() async {
     final loadedDrives = await StorageService.loadDrives();
     final loadedProfile = await StorageService.loadProfile();
@@ -89,7 +90,109 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
         _profile = loadedProfile;
         _isLoading = false;
       });
+
+      if (_profile.isNew && !_hasPromptedProfile) {
+        _hasPromptedProfile = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showProfileSetupPrompt();
+        });
+      }
     }
+  }
+
+  void _showProfileSetupPrompt() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        decoration: const BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(
+            top: BorderSide(color: AppColors.cyanAccent, width: 2),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.cyanAccent.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.person_pin_rounded,
+                color: AppColors.cyanAccent,
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Welcome to Panel 👋',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Set up your student profile to enable automated eligibility criteria checks and personalized placement drive alerts.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showProfileModal();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.cyanAccent,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Set Up Profile',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'Maybe Later',
+                style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _saveDrives() async {
@@ -120,9 +223,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
           drive.postTitle.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           drive.location.toLowerCase().contains(_searchQuery.toLowerCase());
 
-      final matchesStage = _selectedFilterStage == null || drive.stage == _selectedFilterStage;
-
-      return matchesSearch && matchesStage;
+      return matchesSearch;
     }).toList();
   }
 
@@ -172,7 +273,8 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
 
   // 1. Top App Bar (Stitch Header)
   Widget _buildTopAppBar() {
-    final initial = _profile.name.isNotEmpty ? _profile.name[0].toUpperCase() : 'A';
+    final hasName = _profile.name.trim().isNotEmpty;
+    final initial = hasName ? _profile.name.trim()[0].toUpperCase() : '';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -198,17 +300,25 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                   decoration: BoxDecoration(
                     color: AppColors.surfaceVariant,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.outlineVariant),
+                    border: Border.all(
+                      color: hasName ? AppColors.outlineVariant : AppColors.cyanAccent.withOpacity(0.6),
+                    ),
                   ),
                   child: Center(
-                    child: Text(
-                      initial,
-                      style: const TextStyle(
-                        color: AppColors.onSurface,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: hasName
+                        ? Text(
+                            initial,
+                            style: const TextStyle(
+                              color: AppColors.onSurface,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.person_outline,
+                            color: AppColors.cyanAccent,
+                            size: 18,
+                          ),
                   ),
                 ),
               ),
@@ -347,6 +457,73 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
         ),
         const SizedBox(height: 16),
 
+        // Profile Setup Reminder Banner (if not yet completed)
+        if (_profile.isNew && _searchQuery.isEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.cyanAccent.withOpacity(0.15),
+                  AppColors.surfaceCard,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.cyanAccent.withOpacity(0.35)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.cyanAccent.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.badge_outlined, color: AppColors.cyanAccent, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Set Up Your Profile',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Add your CGPA & branch to check drive eligibility.',
+                        style: TextStyle(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _showProfileModal,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.cyanAccent,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Add Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
         // Hero Urgent Card
         if (upcoming != null && _searchQuery.isEmpty) ...[
           StitchUrgentHeroCard(
@@ -457,20 +634,6 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
         ),
         const SizedBox(height: 12),
 
-        // Stage Filter Chips
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildFilterChip('All', null),
-              ...DriveStage.values.map(
-                (stage) => _buildFilterChip(stage.label, stage),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
         // Drive List
         if (_filteredDrives.isEmpty)
           const Padding(
@@ -494,31 +657,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
     );
   }
 
-  Widget _buildFilterChip(String label, DriveStage? stage) {
-    final isSelected = _selectedFilterStage == stage;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: isSelected,
-        selectedColor: AppColors.cyanAccent,
-        backgroundColor: AppColors.surfaceCard,
-        labelStyle: TextStyle(
-          color: isSelected ? Colors.black : AppColors.onSurface,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-        side: BorderSide(
-          color: isSelected ? AppColors.cyanAccent : Colors.white.withOpacity(0.08),
-        ),
-        onSelected: (_) {
-          setState(() {
-            _selectedFilterStage = stage;
-          });
-        },
-      ),
-    );
-  }
+
 
   // 6. Tab 2: Calendar & Rounds Timeline
   Widget _buildCalendarTab() {

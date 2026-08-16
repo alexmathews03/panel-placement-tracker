@@ -13,14 +13,12 @@ class StorageService {
       final prefs = await SharedPreferences.getInstance();
       final String? jsonStr = prefs.getString(_drivesKey);
       if (jsonStr == null || jsonStr.isEmpty) {
-        // Save initial sample data first time
-        await saveDrives(SampleData.initialDrives);
-        return SampleData.initialDrives;
+        return [];
       }
       final List<dynamic> list = jsonDecode(jsonStr);
       return list.map((item) => PlacementDrive.fromJson(item)).toList();
     } catch (e) {
-      return SampleData.initialDrives;
+      return [];
     }
   }
 
@@ -50,11 +48,11 @@ class StorageService {
       final prefs = await SharedPreferences.getInstance();
       final String? jsonStr = prefs.getString(_profileKey);
       if (jsonStr == null || jsonStr.isEmpty) {
-        return SampleData.defaultUser;
+        return StudentProfile.defaultProfile();
       }
       return StudentProfile.fromJson(jsonDecode(jsonStr));
     } catch (e) {
-      return SampleData.defaultUser;
+      return StudentProfile.defaultProfile();
     }
   }
 
