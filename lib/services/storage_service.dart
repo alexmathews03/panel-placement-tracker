@@ -5,8 +5,8 @@ import '../core/models/student_profile.dart';
 import 'sample_data.dart';
 
 class StorageService {
-  static const String _drivesKey = 'drivedeck_drives_v1';
-  static const String _profileKey = 'drivedeck_profile_v1';
+  static const String _drivesKey = 'panel_drives_v1';
+  static const String _profileKey = 'panel_profile_v1';
 
   static Future<List<PlacementDrive>> loadDrives() async {
     try {

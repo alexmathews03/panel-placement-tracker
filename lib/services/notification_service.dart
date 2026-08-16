@@ -47,7 +47,7 @@ class NotificationService {
     if (scheduledTime.isBefore(DateTime.now())) return;
 
     const androidDetails = AndroidNotificationDetails(
-      'drivedeck_reminders',
+      'panel_reminders',
       'Drive Reminders',
       channelDescription: 'Placement drive deadline & assessment reminders',
       importance: Importance.high,
@@ -83,7 +83,7 @@ class NotificationService {
     await init();
 
     const androidDetails = AndroidNotificationDetails(
-      'drivedeck_reminders',
+      'panel_reminders',
       'Drive Reminders',
       channelDescription: 'Placement drive deadline & assessment reminders',
       importance: Importance.high,
